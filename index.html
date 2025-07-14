@@ -2,27 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Test MetaMask en ligne</title>
+  <title>Connexion MetaMask</title>
 </head>
-<body style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;">
-  <h2>Connexion à MetaMask</h2>
-  <button onclick="connect()">🔌 Connexion</button>
+<body style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; font-family: Arial;">
+  <h2>Connecter MetaMask</h2>
+  <button id="connectBtn" style="padding: 12px 24px; font-size: 16px;">🦊 Connexion</button>
+  <p id="result" style="margin-top: 20px; font-weight: bold;"></p>
 
   <script>
-    async function connect() {
-      if (typeof window.ethereum === 'undefined') {
-        alert("MetaMask non détecté. Utilise Firefox ou Chrome avec MetaMask.");
+    const connectBtn = document.getElementById("connectBtn");
+    const result = document.getElementById("result");
+
+    connectBtn.addEventListener("click", async () => {
+      // Vérifie si MetaMask est installé
+      if (typeof window.ethereum === "undefined") {
+        result.textContent = "❌ MetaMask non détecté. Installe-le dans ton navigateur.";
         return;
       }
 
       try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        alert("Connecté à l'adresse : " + accounts[0]);
-      } catch (err) {
-        alert("Erreur ou refus de connexion.");
-        console.error(err);
+        // Demande la connexion
+        const accounts = await window.ethereum.request({
+          method: "eth_requestAccounts"
+        });
+
+        // Si accepté
+        const userAddress = accounts[0];
+        result.textContent = "✅ Connecté à l'adresse : " + userAddress;
+      } catch (error) {
+        // Si refus ou erreur
+        if (error.code === 4001) {
+          result.textContent = "❌ Connexion refusée.";
+        } else {
+          console.error(error);
+          result.textContent = "❌ Erreur lors de la connexion.";
+        }
       }
-    }
+    });
   </script>
 </body>
 </html>
