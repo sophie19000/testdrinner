@@ -1,63 +1,59 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Test MetaMask Firefox</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin-top: 100px;
-    }
-    button {
-      padding: 15px 30px;
-      font-size: 18px;
-      background: #ff9900;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    #status {
-      margin-top: 20px;
-      font-weight: bold;
-      color: darkred;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>Connexion MetaMask Fiable</title>
+  <style> body { font-family: Arial; text-align: center; margin-top: 100px; } button { padding: 12px 24px; font-size: 16px; cursor: pointer; } #status { margin-top: 20px; font-weight: bold; } </style>
 </head>
 <body>
-  <h1>Connexion MetaMask</h1>
-  <button onclick="connect()">🔌 Connecter</button>
+  <h1>Connecter MetaMask</h1>
+  <button id="btn">🦊 Connecter</button>
   <div id="status"></div>
 
   <script>
-    async function connect() {
-      const status = document.getElementById("status");
+    const btn = document.getElementById("btn");
+    const status = document.getElementById("status");
 
-      if (typeof window.ethereum === 'undefined') {
+    btn.addEventListener("click", async () => {
+      status.textContent = "";
+      if (typeof window.ethereum === "undefined") {
         status.textContent = "❌ MetaMask non détecté.";
         console.log("window.ethereum est undefined");
         return;
       }
 
       try {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const accounts = await provider.send("eth_requestAccounts", []);
-        const signer = provider.getSigner();
-        const address = await signer.getAddress();
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
         status.style.color = "green";
-        status.textContent = "✅ Connecté à : " + address;
-        console.log("Connecté à :", address);
-      } catch (error) {
-        if (error.code === 4001) {
-          status.textContent = "❌ Connexion refusée par l'utilisateur.";
-        } else {
-          status.textContent = "❌ Erreur inconnue.";
+        status.textContent = "✅ Connecté à : " + accounts[0];
+        console.log("Accounts:", accounts);
+      } catch (err) {
+        console.error("eth_requestAccounts erreur:", err);
+        if (err.code === -32002 || err.message.includes("Already processing")) {
+          // fallback avec perm request
+          try {
+            const perms = await window.ethereum.request({
+              method: "wallet_requestPermissions",
+              params: [{ eth_accounts: {} }]
+            });
+            const account = perms[0]?.caveats?.[0]?.value[0];
+            if (account) {
+              status.style.color = "green";
+              status.textContent = "✅ Connecté (via permissions) : " + account;
+              console.log("Permissions:", perms);
+              return;
+            }
+          } catch (permErr) {
+            console.error("wallet_requestPermissions erreur:", permErr);
+          }
         }
-        console.error("Erreur MetaMask :", error);
+        if (err.code === 4001) {
+          status.textContent = "❌ Connexion refusée.";
+        } else {
+          status.textContent = "❌ Erreur inconnue, voir console.";
+        }
       }
-    }
+    });
   </script>
 </body>
 </html>
