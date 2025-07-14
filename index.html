@@ -1,59 +1,74 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Connexion MetaMask Fiable</title>
-  <style> body { font-family: Arial; text-align: center; margin-top: 100px; } button { padding: 12px 24px; font-size: 16px; cursor: pointer; } #status { margin-top: 20px; font-weight: bold; } </style>
+  <meta charset="UTF-8" />
+  <title>Connexion Multi-Réseaux MetaMask</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      margin-top: 100px;
+    }
+    button {
+      padding: 14px 28px;
+      font-size: 16px;
+      background: #ff9900;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-  <h1>Connecter MetaMask</h1>
-  <button id="btn">🦊 Connecter</button>
-  <div id="status"></div>
+
+  <h1>Connexion Web3 (tous réseaux)</h1>
+  <button onclick="connect()">🦊 Connexion MetaMask</button>
+  <div id="result"></div>
 
   <script>
-    const btn = document.getElementById("btn");
-    const status = document.getElementById("status");
+    async function connect() {
+      const result = document.getElementById("result");
 
-    btn.addEventListener("click", async () => {
-      status.textContent = "";
-      if (typeof window.ethereum === "undefined") {
-        status.textContent = "❌ MetaMask non détecté.";
-        console.log("window.ethereum est undefined");
+      if (typeof window.ethereum === 'undefined') {
+        result.textContent = "❌ MetaMask non détecté.";
         return;
       }
 
       try {
-        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-        status.style.color = "green";
-        status.textContent = "✅ Connecté à : " + accounts[0];
-        console.log("Accounts:", accounts);
+        // Demande de permission (tous réseaux confondus)
+        await ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+
+        // Connexion au compte
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
+        const address = await signer.getAddress();
+
+        // Info réseau actuel
+        const network = await provider.getNetwork();
+
+        result.style.color = "green";
+        result.innerHTML = `
+          ✅ Connecté à : <strong>${address}</strong><br>
+          🌐 Réseau : <strong>${network.name}</strong><br>
+          🔗 Chain ID : <strong>${network.chainId}</strong>
+        `;
+
       } catch (err) {
-        console.error("eth_requestAccounts erreur:", err);
-        if (err.code === -32002 || err.message.includes("Already processing")) {
-          // fallback avec perm request
-          try {
-            const perms = await window.ethereum.request({
-              method: "wallet_requestPermissions",
-              params: [{ eth_accounts: {} }]
-            });
-            const account = perms[0]?.caveats?.[0]?.value[0];
-            if (account) {
-              status.style.color = "green";
-              status.textContent = "✅ Connecté (via permissions) : " + account;
-              console.log("Permissions:", perms);
-              return;
-            }
-          } catch (permErr) {
-            console.error("wallet_requestPermissions erreur:", permErr);
-          }
-        }
+        console.error("Erreur de connexion:", err);
         if (err.code === 4001) {
-          status.textContent = "❌ Connexion refusée.";
+          result.textContent = "❌ Permission refusée.";
         } else {
-          status.textContent = "❌ Erreur inconnue, voir console.";
+          result.textContent = "❌ Erreur inconnue.";
         }
       }
-    });
+    }
   </script>
 </body>
 </html>
